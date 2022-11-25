@@ -27,17 +27,20 @@ set.seed(1)
 ```
 
 ## Problem 2
-Create a city_state variable and a binary variable indicating whether the homicide is solved.
+Create a city_state variable and a binary variable indicating whether the homicide is solved. 
+Omit four cities.
+Limit to whites and blacks.
 ```{r}
 homicide = read_csv(file = "./data/homicide-data.csv") %>%
   janitor::clean_names() %>% 
   unite("city_state",c("city", "state"), sep = ",") %>% 
   mutate(
-    sovled = recode(
+    resovled = recode(
        disposition, 'Closed by arrest' = 1, 'Closed without arrest' = 0, 'Open/No arrest' = 0)) %>% 
-  filter(city_state != c("Dallas,TX", "Phoenix,AZ", "Kansas City,MO", "Tulsa,AL"))
+  filter(city_state != c("Dallas,TX", "Phoenix,AZ", "Kansas City,MO", "Tulsa,AL")) %>% 
+  filter(victim_race == c("White","Black"))%>% 
+  mutate(victim_age = as.numeric(victim_age))
 
-homicide
 ```
 
 ```{r}
