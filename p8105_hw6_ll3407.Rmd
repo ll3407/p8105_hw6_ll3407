@@ -8,6 +8,7 @@ date: "2022-11-25"
 library(tidyverse)
 library(p8105.datasets)
 library(viridis)
+library(purrr)
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -45,7 +46,10 @@ homicide = read_csv(file = "./data/homicide-data.csv") %>%
 
 #Fit a logistic regression model for Baltimore
 ```{r}
-fit_Baltimore = lm(resolved ~ victim_age + victim_sex + victim_race, data = homicide)
+Baltimore = homicide %>% 
+  filter(city_state == "Baltimore,MD") 
+
+  fit_Baltimore = glm(resolved ~ victim_age + victim_sex + victim_race, data = Baltimore)
 
 ```
 
@@ -59,5 +63,37 @@ OR_Baltimore = fit_Baltimore %>% broom::tidy() %>%
     ci_lower = exp(estimate-1.96*std.error), 
     ci_upper = exp(estimate+1.96*std.error)
   )
+```
+
+GLM for each city.
+OR and 95% CI for resolved homicides comparing male to female.
+```{r}
+nest = homicide %>% 
+  select(city_state,resolved,victim_age,victim_sex,victim_race) %>% 
+  mutate(race = recode(
+       victim_race, 'Black' = 1, 'White' = 0)) %>% 
+  mutate(sex_male = recode(
+       victim_sex, 'Male' = 1, 'Female' = 0, 'Unknown' = 0)) %>% 
+   mutate(sex_unknown = recode(
+       victim_sex, 'Unknown' = 1, 'Female' = 0, 'Male' = 0))  %>% 
+  nest(df = -city_state) 
+
+OR = nest %>% 
+  mutate(
+    models = map(.x = df, ~lm(resolved ~ victim_age + sex_male + sex_unknown + race , data = .x )),
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(city_state,results) %>% 
+  unnest(results) 
+  
+  OR_all = OR%>%
+  filter(term == "sex_male") %>% 
+  select(city_state, estimate, std.error) %>% 
+  mutate(
+    OR_M_to_F = exp(estimate),
+    ci_lower = exp(estimate-1.96*std.error), 
+    ci_upper = exp(estimate+1.96*std.error)
+  ) %>% 
+    select( -estimate, -std.error)
 ```
 
