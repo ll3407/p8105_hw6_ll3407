@@ -34,9 +34,10 @@ homicide = read_csv(file = "./data/homicide-data.csv") %>%
   unite("city_state",c("city", "state"), sep = ",") %>% 
   mutate(
     sovled = recode(
-       disposition, 'Closed by arrest' = 1, 'Closed without arrest' = 0, 'Open/No arrest' = 0))
+       disposition, 'Closed by arrest' = 1, 'Closed without arrest' = 0, 'Open/No arrest' = 0)) %>% 
+  filter(city_state != c("Dallas,TX", "Phoenix,AZ", "Kansas City,MO", "Tulsa,AL"))
 
-
+homicide
 ```
 
 ```{r}
