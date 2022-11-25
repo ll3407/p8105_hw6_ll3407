@@ -35,7 +35,7 @@ homicide = read_csv(file = "./data/homicide-data.csv") %>%
   janitor::clean_names() %>% 
   unite("city_state",c("city", "state"), sep = ",") %>% 
   mutate(
-    resovled = recode(
+    resolved = recode(
        disposition, 'Closed by arrest' = 1, 'Closed without arrest' = 0, 'Open/No arrest' = 0)) %>% 
   filter(city_state != c("Dallas,TX", "Phoenix,AZ", "Kansas City,MO", "Tulsa,AL")) %>% 
   filter(victim_race == c("White","Black"))%>% 
@@ -43,7 +43,21 @@ homicide = read_csv(file = "./data/homicide-data.csv") %>%
 
 ```
 
+#Fit a logistic regression model for Baltimore
 ```{r}
+fit_Baltimore = lm(resolved ~ victim_age + victim_sex + victim_race, data = homicide)
 
+```
+
+OR and 95% CIs for the resolved homicide comparing male to female in Baltimore
+```{r}
+OR_Baltimore = fit_Baltimore %>% broom::tidy() %>% 
+  filter(term == "victim_sexMale") %>% 
+  select(estimate, std.error) %>% 
+  mutate(
+    OR_M_to_F = exp(estimate),
+    ci_lower = exp(estimate-1.96*std.error), 
+    ci_upper = exp(estimate+1.96*std.error)
+  )
 ```
 
