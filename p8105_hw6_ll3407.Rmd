@@ -9,6 +9,7 @@ library(tidyverse)
 library(p8105.datasets)
 library(viridis)
 library(purrr)
+library(modelr)
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -146,7 +147,87 @@ view(exclude)
 In the logistic models, we will remove the covariate with a p-value>=0.05 (fincome, frace, malforml, menarche, mheight, momage, ppbmi, ppwt).
 
 ```{r}
-lm_BW = lm(bwt ~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken + wtgain, data = BW) %>% broom::tidy()
+lm_BW = lm(bwt ~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken + wtgain, data = BW)
 ```
 
+Plot of predictions and residuals
+```{r}
+Plot_pred_resid = BW %>% 
+  add_predictions(lm_BW) %>% 
+  add_residuals(lm_BW) %>% 
+  ggplot(aes(x = resid, y = pred)) + 
+  geom_point(alpha = .5)
 
+Plot_pred_resid
+```
+
+cross validation
+```{r}
+cv_df = 
+  crossv_mc(BW, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  ) %>% 
+
+```
+
+Two other models
+```{r}
+model_1 = lm(bwt ~ blength + gaweeks, data = BW) 
+
+model_2 = lm(bwt ~ babysex + bhead + blength + babysex*bhead + babysex*blength + bhead*blength + babysex*bhead*blength, data = BW)
+```
+
+cross validation
+```{r}
+cv_df = 
+  crossv_mc(BW, 100) %>% 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  ) %>% 
+  mutate(
+    lm_BW_fits = map(.x = train, ~lm(bwt ~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken + wtgain, data = .x)),
+    model1_fits = map(.x = train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+    model2_fits = map(.x = train, ~lm(bwt ~ babysex + bhead + blength + babysex*bhead + babysex*blength + bhead*blength + babysex*bhead*blength, data = .x))
+  ) %>% 
+  mutate(
+    rmse_lmBW = map2_dbl(.x = lm_BW_fits, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model1 = map2_dbl(.x = model1_fits, .y = test, ~rmse(model = .x, data = .y)),
+    rmse_model2 = map2_dbl(.x = model2_fits, .y = test, ~rmse(model = .x, data = .y))
+  )
+
+```
+
+Make a box plot
+```{r}
+rmse_plot = cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  ggplot(aes(x = model, y = rmse)) +
+  geom_boxplot()
+
+rmse_plot
+```
+
+average rmse
+```{r}
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) %>% 
+  group_by(model) %>% 
+  summarize(avg_rmse = mean(rmse))
+```
+
+The model I built is the best, and model 2 is better than model 1.
