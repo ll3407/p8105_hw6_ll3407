@@ -71,8 +71,7 @@ OR and 95% CI for resolved homicides comparing male to female.
 nest = homicide %>% 
   select(city_state,resolved,victim_age,victim_sex,victim_race) %>% 
   mutate(race = recode(
-       victim_race, 'Black' = 1, 'White' = 0)) %>% 
-  mutate(sex_male = recode(
+       victim_race, 'Black' = 1, 'White' = 0)) %>%   mutate(sex_male = recode(
        victim_sex, 'Male' = 1, 'Female' = 0, 'Unknown' = 0)) %>% 
    mutate(sex_unknown = recode(
        victim_sex, 'Unknown' = 1, 'Female' = 0, 'Male' = 0))  %>% 
@@ -113,5 +112,41 @@ plot_OR
 ```
 Comment: Telsa in AL has the highest OR of resolved homicides comparing males to females, while New York in NY has the lowest. San Bernardino in CA has the widest CI range of resolved homicides comparing males to females, while Chicago in IL has the narrowest.
 
+## Problem 3
+Read and clean data
+```{r}
+BW = read_csv(file = "./data/birthweight.csv") %>%
+  janitor::clean_names() %>% 
+  mutate(babysex = as.factor(babysex)) %>% 
+  mutate(frace = as.factor(frace)) %>% 
+  mutate(malform = as.factor(malform)) %>% 
+  mutate(mrace = as.factor(mrace)) 
+
+head(BW, 100)
+```
+
+Check missing data
+
+```{r}
+  summary(BW$pnumlbw)
+  summary(BW$pnumsga)
+  
+```
+
+Variables of pnumlbw and pnumsga are with "0" value, so we should not include them in the models 
+```{r}
+fit_BW = 
+  BW %>% lm(bwt ~ babysex + bhead + blength + delwt + fincome + frace + gaweeks + malform + menarche + mheight + momage + mrace + parity + ppbmi + ppwt + smoken + wtgain, data = .) %>% broom::tidy()  
+  
+exclude = fit_BW %>% filter(p.value >= 0.05)
+view(exclude)
+
+```
+
+In the logistic models, we will remove the covariate with a p-value>=0.05 (fincome, frace, malforml, menarche, mheight, momage, ppbmi, ppwt).
+
+```{r}
+lm_BW = lm(bwt ~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken + wtgain, data = BW) %>% broom::tidy()
+```
 
 
